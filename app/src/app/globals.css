@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+/* 따뜻한 파스텔 */
+@theme {
+  --color-cream: #fff8f1;
+  --color-card: #ffffff;
+  --color-ink: #3d3530;
+  --color-muted: #8a7f77;
+  --color-line: #f1e6da;
+  --color-sand: #ece1d5;
+  --color-peach: #ffcdb8;
+  --color-mint: #c3ecd8;
+  --color-mint-deep: #3f9f78;
+  --color-butter: #ffe9a8;
+  --color-lilac: #ddcdfd;
+  --color-sky: #c4e2f8;
+  --color-rose: #f9c6d1;
+  --color-coral: #e8694a;
+  /* 키 컬러: 연한 민트 */
+  --color-key: #b4ead1;
+  --color-key-strong: #86d6b2;
+  --color-key-ink: #1d5f46;
+  --font-sans: Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+}
+
+body {
+  background: var(--color-cream);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}

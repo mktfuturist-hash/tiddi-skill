@@ -1,0 +1,6 @@
+# 설치하면 생기는 것 · 내 컴퓨터 데이터는 올리지 않아요
+app/node_modules/
+app/.next/
+app/data/
+app/next-env.d.ts
+*.log
