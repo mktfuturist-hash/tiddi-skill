@@ -23,7 +23,7 @@
 [Claude Code](https://claude.com/claude-code)에 아래처럼 말하면 돼요.
 
 ```
-{이 저장소 주소}
+https://github.com/mktfuturist-hash/tiddi-skill
 이 스킬 설치해 줘. 다 되면 TIDDI 설치해 줘.
 ```
 
