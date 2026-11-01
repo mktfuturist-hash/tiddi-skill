@@ -10,6 +10,7 @@ import DoneView from "./DoneView";
 import Gauge from "./Gauge";
 import HelpView from "./HelpView";
 import HistoryView from "./HistoryView";
+import Logo from "./Logo";
 import OldFilesView from "./OldFilesView";
 import PairsView, { type DupTab } from "./PairsView";
 import { FirstRun, Scanning } from "./StartViews";
@@ -165,9 +166,8 @@ export default function TiddiApp() {
     <div className="flex min-h-full flex-1 flex-col">
       <header className="sticky top-0 z-10 border-b border-line bg-cream/90 backdrop-blur">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-3">
-          <button onClick={() => go("home")} className="flex items-center gap-2">
-            <span className="grid size-9 place-items-center rounded-2xl bg-key text-lg">🧽</span>
-            <span className="text-xl font-extrabold tracking-tight">TIDDI</span>
+          <button onClick={() => go("home")}>
+            <Logo />
           </button>
           {ready && (
             <nav className="flex flex-wrap gap-1 text-sm">

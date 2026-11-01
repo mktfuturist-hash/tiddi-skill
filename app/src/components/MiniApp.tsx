@@ -8,6 +8,7 @@ import { RECON } from "@/lib/mode";
 import type { OldResult } from "@/lib/old-types";
 import { defaultDupPicks } from "@/lib/pair-types";
 import type { HistoryEntry, Refused } from "@/lib/trash-types";
+import Logo from "./Logo";
 import Thumb from "./Thumb";
 import { useHeartbeat } from "./useHeartbeat";
 import { usePairs } from "./usePairs";
@@ -97,10 +98,7 @@ export default function MiniApp() {
   return (
     <div className="mx-auto flex min-h-full w-full max-w-md flex-1 flex-col gap-3 px-4 py-4">
       <header className="flex items-center justify-between">
-        <span className="flex items-center gap-2">
-          <span className="grid size-8 place-items-center rounded-xl bg-key">🧽</span>
-          <span className="text-lg font-extrabold tracking-tight">TIDDI</span>
-        </span>
+        <Logo small />
         <button onClick={() => openFull()} className="rounded-full px-3 py-1 text-sm font-semibold hover:bg-line">
           전체 화면으로 ↗
         </button>

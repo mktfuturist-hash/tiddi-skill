@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "TIDDI",
-  description: "용량 경고가 뜰 때 10분 안에 끝내는 저장공간 정리",
+  description: "Tidy files, more space. 용량 경고가 뜰 때 10분 안에 끝내는 저장공간 정리",
   robots: { index: false, follow: false },
 };
 

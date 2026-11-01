@@ -1,6 +1,8 @@
 <p align="center"><img src="assets/icon.png" width="120" alt="TIDDI 아이콘"></p>
 
-<h1 align="center">TIDDI 🧽</h1>
+<h1 align="center">TIDDI</h1>
+
+<p align="center"><b><i>Tidy files, more space.</i></b><br>파일은 깔끔하게, 공간은 넉넉하게</p>
 
 <p align="center">용량 경고가 뜰 때 <b>10분 안에</b> 끝내는 윈도우 저장공간 정리 앱<br>뭐가 용량을 먹는지 그림으로 보고, 중복과 오래된 파일을 <b>체크한 것만 휴지통으로</b></p>
 
@@ -64,6 +66,10 @@ https://github.com/mktfuturist-hash/tiddi-skill
 ## 알아 두세요
 
 TIDDI는 휴지통으로만 보내고 보내기 전에 여러 번 확인하지만, **무엇을 보낼지는 쓰는 사람이 직접 확인하고 골라요.** 윈도우 휴지통을 비우기 전에 한 번 더 살펴봐 주세요.
+
+## 이름 뜻
+
+**TIDDI = Tidy files, more space.** 파일을 깔끔하게(tidy) 정리하면 그만큼 공간이 생긴다는 뜻이에요.
 
 ## 만든 사람
 

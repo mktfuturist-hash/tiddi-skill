@@ -3,7 +3,8 @@ import { formatBytes } from "@/lib/format";
 export function FirstRun({ onScan }: { onScan: () => void }) {
   return (
     <section className="rounded-3xl bg-card px-6 py-10 text-center ring-1 ring-line">
-      <p className="text-5xl">🧽</p>
+      {/* eslint-disable-next-line @next/next/no-img-element -- 작은 로고 한 장이라 next/image 최적화가 필요 없어요 */}
+      <img src="/tiddi.png" alt="" className="mx-auto size-20 rounded-[22%] shadow-sm" />
       <h2 className="mt-3 text-2xl font-extrabold">아직 훑어보지 않았어요</h2>
       <p className="mt-2 text-muted">
         C 드라이브를 훑어서 뭐가 용량을 먹는지 찾아요. 3분쯤 걸려요.
