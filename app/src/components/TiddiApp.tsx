@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { driveName } from "@/lib/drive-types";
 import { formatBytes } from "@/lib/format";
 import type { OldFile } from "@/lib/old-types";
 import { defaultDupPicks, type DupGroup } from "@/lib/pair-types";
@@ -67,6 +68,8 @@ export default function TiddiApp() {
   const [undoingId, setUndoingId] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [oldKey, setOldKey] = useState(0);
+  // 홈에서 보고 있는 드라이브 (없으면 시스템 드라이브)
+  const [driveTab, setDriveTab] = useState<string | null>(null);
 
   const found = pairsStatus?.result ?? null;
   const pairList = found?.pairs ?? [];
@@ -81,8 +84,12 @@ export default function TiddiApp() {
   const finding = pairsStatus?.status === "running";
 
   const result = status?.result ?? null;
-  const drive = status?.drive ?? { total: 0, free: 0 };
-  const used = drive.total - drive.free;
+  const drives = status?.drives ?? [];
+  // 윈도우가 깔린 드라이브(보통 C)가 기본이고, 위쪽 탭으로 다른 드라이브를 골라 봐요
+  const sysDrive = drives.find((d) => d.system) ?? drives[0] ?? null;
+  const shown = drives.find((d) => d.letter === driveTab) ?? sysDrive;
+  const shownScan = result?.drives.find((d) => d.letter === shown?.letter) ?? null;
+  const scanningDrive = drives.find((d) => d.letter === status?.progress.drive) ?? sysDrive;
   const running = status?.status === "running";
   const ready = !!result && !running;
 
@@ -219,9 +226,16 @@ export default function TiddiApp() {
 
         {status && !ready && (
           <>
-            <Gauge label="C 드라이브" total={drive.total} free={drive.free} />
+            {sysDrive && <Gauge label={driveName(sysDrive)} total={sysDrive.total} free={sysDrive.free} />}
             {running ? (
-              <Scanning files={status.progress.files} bytes={status.progress.bytes} used={used} current={status.progress.current} />
+              <Scanning
+                files={status.progress.files}
+                bytes={status.progress.bytes}
+                used={scanningDrive ? scanningDrive.total - scanningDrive.free : 0}
+                current={status.progress.current}
+                drive={status.progress.drive}
+                step={drives.length > 1 ? status.progress.step : ""}
+              />
             ) : (
               <FirstRun onScan={start} />
             )}
@@ -230,7 +244,30 @@ export default function TiddiApp() {
 
         {ready && view === "home" && (
           <>
-            <Gauge label="C 드라이브" total={drive.total} free={drive.free} />
+            {drives.length > 1 && (
+              <div className="flex flex-wrap gap-2">
+                {drives.map((d) => {
+                  const on = shown?.letter === d.letter;
+                  return (
+                    <button
+                      key={d.letter}
+                      onClick={() => setDriveTab(d.letter)}
+                      className={`rounded-2xl px-4 py-2 text-left text-sm ring-1 transition ${on ? "bg-ink text-white ring-ink" : "bg-card ring-line hover:bg-line"}`}
+                    >
+                      <span className="block font-bold">
+                        {d.manage ? "" : "👀 "}
+                        {driveName(d)}
+                      </span>
+                      <span className={`block text-xs ${on ? "text-white/70" : "text-muted"}`}>
+                        {formatBytes(d.free)} 남음 / {formatBytes(d.total)}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+            {shown && <Gauge label={driveName(shown)} total={shown.total} free={shown.free} />}
+            {shown && !shown.manage && <p className="rounded-2xl bg-sky/50 px-4 py-3 text-sm">👀 {shown.reason}. 용량만 보여 드려요.</p>}
             <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-sm text-muted">
               <span>
                 마지막으로 훑은 때 {when(result.scannedAt)} · 파일 {result.files.toLocaleString("ko-KR")}개 · {Math.round(result.durationMs / 1000)}초 걸림
@@ -278,8 +315,24 @@ export default function TiddiApp() {
                 오래된 파일 보기
               </button>
             </section>
-            <StorageMap tree={result.tree} used={used} onOpenPairs={() => go("dupes")} />
-            <TypeBar types={result.types} />
+            {shown && shownScan ? (
+              <>
+                <StorageMap
+                  key={shown.letter}
+                  tree={shownScan.tree}
+                  used={shown.total - shown.free}
+                  system={shown.system}
+                  onOpenPairs={() => go("dupes")}
+                />
+                <TypeBar types={shownScan.types} />
+              </>
+            ) : (
+              shown?.manage && (
+                <p className="rounded-2xl bg-card px-4 py-6 text-center text-sm text-muted ring-1 ring-line">
+                  {shown.letter} 드라이브는 아직 훑지 않았어요. 위의 「다시 훑기」를 누르면 지도가 생겨요.
+                </p>
+              )
+            )}
           </>
         )}
 

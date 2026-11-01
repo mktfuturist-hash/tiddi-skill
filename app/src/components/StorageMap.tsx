@@ -11,7 +11,7 @@ const GB = 1024 ** 3;
 
 type Tile = { id: string; name: string; size: number; tone: Tone; locked: boolean; note: string; node?: MapDir; files?: number; kind?: DirKind };
 
-function tilesFor(node: MapDir, isRoot: boolean, unaccounted: number): Tile[] {
+function tilesFor(node: MapDir, isRoot: boolean, unaccounted: number, system: boolean): Tile[] {
   const tiles: Tile[] = (node.children ?? []).map((c, i) => ({
     id: c.path,
     name: c.name,
@@ -26,7 +26,7 @@ function tilesFor(node: MapDir, isRoot: boolean, unaccounted: number): Tile[] {
   if (node.rest) {
     tiles.push({ id: `${node.path}|rest`, name: `작은 폴더 ${node.rest.count}개`, size: node.rest.size, tone: "sand", locked: node.locked, note: "20MB보다 작은 폴더들을 묶었어요" });
   }
-  if (node.own > 0 && isRoot) {
+  if (node.own > 0 && isRoot && system) {
     // C:\ 바로 아래 파일은 대부분 pagefile.sys · hiberfil.sys예요
     tiles.push({
       id: `${node.path}|own`,
@@ -39,7 +39,7 @@ function tilesFor(node: MapDir, isRoot: boolean, unaccounted: number): Tile[] {
   } else if (node.own > 0) {
     tiles.push({ id: `${node.path}|own`, name: "이 폴더의 파일", size: node.own, tone: "sand", locked: node.locked, note: "하위 폴더가 아니라 여기 바로 들어 있는 파일들이에요" });
   }
-  if (isRoot && unaccounted > GB) {
+  if (isRoot && system && unaccounted > GB) {
     tiles.push({
       id: "unaccounted",
       name: "확인 못 한 곳",
@@ -52,11 +52,11 @@ function tilesFor(node: MapDir, isRoot: boolean, unaccounted: number): Tile[] {
   return tiles.filter((t) => t.size > 0);
 }
 
-export default function StorageMap({ tree, used, onOpenPairs }: { tree: MapDir; used: number; onOpenPairs: () => void }) {
+export default function StorageMap({ tree, used, system = true, onOpenPairs }: { tree: MapDir; used: number; system?: boolean; onOpenPairs: () => void }) {
   const [trail, setTrail] = useState<MapDir[]>([]);
   const [picked, setPicked] = useState<Tile | null>(null);
   const here = trail.length ? trail[trail.length - 1] : tree;
-  const tiles = squarify(tilesFor(here, trail.length === 0, used - tree.size), BOX);
+  const tiles = squarify(tilesFor(here, trail.length === 0, used - tree.size, system), BOX);
 
   const open = (tile: Tile) => {
     if (tile.node) {
@@ -82,7 +82,7 @@ export default function StorageMap({ tree, used, onOpenPairs }: { tree: MapDir; 
       </div>
       <nav className="mt-2 flex flex-wrap items-center gap-1 text-sm">
         <button className="rounded-full px-2 py-0.5 font-semibold hover:bg-line" onClick={() => goTo(0)}>
-          C 드라이브
+          {tree.name}
         </button>
         {trail.map((p, i) => (
           <span key={p.path} className="flex items-center gap-1">

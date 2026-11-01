@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { driveName } from "@/lib/drive-types";
 import { isPicture } from "@/lib/file-kinds";
 import { formatBytes } from "@/lib/format";
 import { topSpots } from "@/lib/map-utils";
@@ -33,13 +34,17 @@ export default function MiniApp() {
   const [old, setOld] = useState<OldResult | null>(null);
   const [oldKey, setOldKey] = useState(0);
 
-  const drive = status?.drive ?? { total: 0, free: 0 };
+  // 크게 보여 주는 건 윈도우가 깔린 드라이브(보통 C), 다른 드라이브는 아래에 한 줄씩
+  const drives = status?.drives ?? [];
+  const sysDrive = drives.find((d) => d.system) ?? drives[0];
+  const others = drives.filter((d) => d !== sysDrive);
+  const drive = sysDrive ?? { total: 0, free: 0, letter: "C", label: "" };
   const used = drive.total - drive.free;
   const pct = drive.total ? (used / drive.total) * 100 : 0;
   const low = drive.free < LOW;
   const result = status?.result ?? null;
   const running = status?.status === "running";
-  const spots = result ? topSpots(result.tree, result.home) : [];
+  const spots = result ? topSpots(result) : [];
 
   // 팝업에서는 「확실한 중복」만 한 번에 정리해요: 사본이 있는 스크린샷 원본 + 다른 폴더에 있는 같은 사진 (최근 7일 · 프로젝트 파일 빼고)
   const found = pairsStatus?.result ?? null;
@@ -109,7 +114,7 @@ export default function MiniApp() {
       {error && <p className="rounded-2xl bg-peach/60 px-4 py-3 text-sm">{error}</p>}
 
       <section className="rounded-3xl bg-card p-5 shadow-sm ring-1 ring-line">
-        <p className="text-xs font-semibold text-muted">C 드라이브</p>
+        <p className="text-xs font-semibold text-muted">{driveName(drive)}</p>
         <p className="mt-0.5 text-4xl font-extrabold tracking-tight">
           <span className={low ? "text-coral" : "text-mint-deep"}>{status ? formatBytes(drive.free) : "…"}</span>
           <span className="ml-1.5 text-xl font-bold">남음</span>
@@ -121,6 +126,26 @@ export default function MiniApp() {
           <p className="mt-1.5 text-xs text-muted">
             전체 {formatBytes(drive.total)} 중 {formatBytes(used)} 사용 중
           </p>
+        )}
+        {others.length > 0 && (
+          <ul className="mt-3 space-y-2 border-t border-line pt-3">
+            {others.map((d) => (
+              <li key={d.letter} className="text-xs">
+                <div className="flex justify-between gap-2">
+                  <span className="truncate font-semibold">
+                    {d.manage ? "" : "👀 "}
+                    {driveName(d)}
+                  </span>
+                  <span className="shrink-0 text-muted">
+                    {formatBytes(d.free)} 남음 / {formatBytes(d.total)}
+                  </span>
+                </div>
+                <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-line">
+                  <div className="h-full rounded-full bg-key-strong" style={{ width: `${d.total ? ((d.total - d.free) / d.total) * 100 : 0}%` }} />
+                </div>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
 

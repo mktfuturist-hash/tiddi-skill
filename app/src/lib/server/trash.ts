@@ -2,13 +2,13 @@
 // 영구 삭제는 없어요. 실제로 옮기는 일은 scripts/trash.ps1(윈도우 휴지통으로만)과 scripts/restore.ps1(휴지통의 「복원」)이 해요.
 import { spawn } from "node:child_process";
 import { promises as fsp } from "node:fs";
-import os from "node:os";
 import path from "node:path";
+import { letterOf } from "@/lib/drive-types";
 import { RECON } from "@/lib/mode";
 import { MONTH_MS, OLD_MIN_MONTHS } from "@/lib/old-types";
 import type { DupFile } from "@/lib/pair-types";
 import { RECENT_MS, type HistoryEntry, type Refused, type TrashItem } from "@/lib/trash-types";
-import { binInfo, forgetBin } from "./bin";
+import { forgetDrives, listDrives, placeProblem } from "./drives";
 import { gonePaths, readHistory, writeHistory } from "./history";
 import { findOldFile } from "./old";
 import { currentPairs, markBack, markGone, monthOf } from "./pairs";
@@ -78,9 +78,8 @@ export async function sendToTrash(paths: unknown): Promise<{ entry: HistoryEntry
   try {
     // 기록을 남길 수 있는지 먼저 확인해요. 못 남기면 아무것도 옮기지 않아요
     await readHistory();
-    // 휴지통이 꺼져 있으면(바로 영구 삭제 설정) 아무것도 보내지 않아요
-    const bin = await binInfo();
-    if (bin.off) throw new Error("윈도우 휴지통이 꺼져 있어서(바로 영구 삭제 설정) 보내지 않아요. 휴지통 속성에서 켜 주세요");
+    // 드라이브마다 휴지통을 믿을 수 있는지 · 얼마나 받아 줄 수 있는지 새로 읽어요
+    const drives = await listDrives(true);
     const gone = await gonePaths();
     const pairsResult = await currentPairs();
     const shots = new Map((pairsResult ? [...pairsResult.pairs, ...pairsResult.uniques] : []).map((s) => [s.path.toLowerCase(), s]));
@@ -90,7 +89,6 @@ export async function sendToTrash(paths: unknown): Promise<{ entry: HistoryEntry
       const members = grp.files.filter((f) => !gone.has(f.path.toLowerCase()));
       for (const f of members) dupIndex.set(f.path.toLowerCase(), { group: grp.id, file: f, members });
     }
-    const homeL = `${os.homedir().toLowerCase()}\\`;
 
     const ok: TrashItem[] = [];
     const refused: Refused[] = [];
@@ -104,8 +102,10 @@ export async function sendToTrash(paths: unknown): Promise<{ entry: HistoryEntry
         refuse(p, "이미 휴지통에 있어요");
         continue;
       }
-      if (!key.startsWith(homeL) || key.startsWith(`${homeL}appdata\\`)) {
-        refuse(p, "내 사용자 폴더 밖이나 AppData 안의 파일은 보내지 않아요");
+      // 휴지통을 믿을 수 있는 드라이브인지, 그 드라이브에서 보내도 되는 자리인지
+      const where = placeProblem(p, drives);
+      if (where) {
+        refuse(p, where);
         continue;
       }
       const st = await stat(p);
@@ -180,13 +180,19 @@ export async function sendToTrash(paths: unknown): Promise<{ entry: HistoryEntry
       else ok.push(...items);
     }
 
-    const total = ok.reduce((a, s) => a + s.size, 0);
-    // 휴지통이 받아 줄 수 있는 만큼까지만 (넘으면 휴지통을 거치지 않고 지워질 수 있어요)
-    if (total > bin.limit) throw new Error(`휴지통에 남은 자리(${Math.floor(bin.limit / 1024 ** 2).toLocaleString("ko-KR")}MB)보다 커요. 나눠서 보내거나 윈도우 휴지통을 먼저 비워 주세요`);
+    // 드라이브마다 그 드라이브 휴지통이 받아 줄 수 있는 만큼까지만 (넘으면 휴지통을 거치지 않고 지워질 수 있어요)
+    const perDrive = new Map<string, number>();
+    for (const s of ok) perDrive.set(letterOf(s.path), (perDrive.get(letterOf(s.path)) ?? 0) + s.size);
+    for (const [letter, total] of perDrive) {
+      const limit = drives.find((d) => d.letter === letter)?.binLimit ?? 0;
+      if (total > limit) {
+        throw new Error(`${letter} 드라이브 휴지통에 남은 자리(${Math.floor(limit / 1024 ** 2).toLocaleString("ko-KR")}MB)보다 커요. 나눠서 보내거나 윈도우 휴지통을 먼저 비워 주세요`);
+      }
+    }
     if (ok.length === 0) return { entry: null, refused };
 
     const results = await runScript("trash", ok.map((s) => s.path));
-    forgetBin();
+    forgetDrives();
     const moved = ok.filter((s) => results.get(s.path.toLowerCase()) === null);
     for (const s of ok) {
       const why = results.get(s.path.toLowerCase());

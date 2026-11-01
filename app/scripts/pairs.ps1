@@ -8,7 +8,9 @@ param(
   [Parameter(Mandatory = $true)][string]$Out,
   [string]$OneDrive = "",
   [int]$WindowMinutes = 15,
-  [int]$MaxDistance = 8
+  [int]$MaxDistance = 8,
+  # 같이 볼 자료 드라이브 (예: "D:\|E:\"). 프로그램 · 게임 · 시스템 폴더는 빼고 봐요
+  [string]$ExtraRoots = ""
 )
 $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -40,6 +42,11 @@ public static class TiddiPairs {
     ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".heic", ".webp", ".tif", ".tiff", ".mp4", ".mov", ".avi", ".mkv", ".m4v", ".wmv"
   };
   static readonly string[] SkipNames = { "appdata", "node_modules", ".git", ".next", "$recycle.bin" };
+  // 자료 드라이브(D 등)에서 더 빼는 폴더
+  static readonly HashSet<string> DataSkip = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
+    "system volume information", "windows", "program files", "program files (x86)", "programdata",
+    "windowsapps", "recovery", "config.msi", "msocache", "steamlibrary", "steamapps", "xboxgames", "epic games", "riot games"
+  };
   static long lastTick;
   static System.Diagnostics.Stopwatch sw;
 
@@ -59,7 +66,7 @@ public static class TiddiPairs {
     return new Pic { Path = f.FullName, Size = f.Length, Write = f.LastWriteTimeUtc, Create = f.CreationTimeUtc };
   }
 
-  static void Collect(DirectoryInfo dir, string shots, string oneDrive, List<Pic> list, List<Pic> media, bool inProject) {
+  static void Collect(DirectoryInfo dir, string shots, string oneDrive, List<Pic> list, List<Pic> media, bool inProject, bool data) {
     List<FileSystemInfo> items;
     try { items = dir.EnumerateFileSystemInfos().ToList(); } catch { return; }
     bool project = inProject || items.Any(i => i.Name.Equals("package.json", StringComparison.OrdinalIgnoreCase) || i.Name.Equals(".git", StringComparison.OrdinalIgnoreCase));
@@ -68,10 +75,11 @@ public static class TiddiPairs {
       if ((a & FileAttributes.Directory) != 0) {
         string name = it.Name.ToLowerInvariant();
         if (SkipNames.Contains(name) || name.StartsWith(".")) continue;
+        if (data && (DataSkip.Contains(name) || (a & (FileAttributes.Hidden | FileAttributes.System)) != 0)) continue;
         if (string.Equals(it.FullName.TrimEnd('\\'), shots, StringComparison.OrdinalIgnoreCase)) continue;
         bool reparse = (a & FileAttributes.ReparsePoint) != 0;
         if (reparse && (oneDrive.Length == 0 || !it.FullName.StartsWith(oneDrive, StringComparison.OrdinalIgnoreCase))) continue;
-        Collect((DirectoryInfo)it, shots, oneDrive, list, media, project);
+        Collect((DirectoryInfo)it, shots, oneDrive, list, media, project, data);
       } else if (MediaExts.Contains(it.Extension) && !IsCloud(a)) {
         var pic = ToPic((FileInfo)it);
         pic.Project = project;
@@ -187,7 +195,7 @@ public static class TiddiPairs {
     return c;
   }
 
-  public static void Run(string home, string shots, string outPath, string oneDrive, int windowMinutes, int maxDistance) {
+  public static void Run(string home, string shots, string outPath, string oneDrive, int windowMinutes, int maxDistance, string extraRoots) {
     sw = System.Diagnostics.Stopwatch.StartNew();
     shots = shots.TrimEnd('\\');
     var outw = new StreamWriter(outPath, false, new UTF8Encoding(false));
@@ -202,7 +210,11 @@ public static class TiddiPairs {
     }
     var others = new List<Pic>();
     var media = new List<Pic>();
-    Collect(new DirectoryInfo(home), shots, oneDrive ?? "", others, media, false);
+    Collect(new DirectoryInfo(home), shots, oneDrive ?? "", others, media, false, false);
+    foreach (var extra in (extraRoots ?? "").Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries)) {
+      var dir = new DirectoryInfo(extra);
+      if (dir.Exists) Collect(dir, shots, oneDrive ?? "", others, media, false, true);
+    }
 
     // 시각 순으로 정렬해 두고, 사본 후보마다 앞뒤 windowMinutes 안의 스크린샷만 비교해요
     var byTime = shotList.OrderBy(s => s.Write).ToList();
@@ -273,4 +285,4 @@ public static class TiddiPairs {
 }
 '@
 
-[TiddiPairs]::Run($UserHome, $Shots, $Out, $OneDrive, $WindowMinutes, $MaxDistance)
+[TiddiPairs]::Run($UserHome, $Shots, $Out, $OneDrive, $WindowMinutes, $MaxDistance, $ExtraRoots)

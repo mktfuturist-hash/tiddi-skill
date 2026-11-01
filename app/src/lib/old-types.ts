@@ -9,12 +9,15 @@ export type OldFile = {
   // 마지막으로 고친 때
   time: string;
   group: OldGroup;
+  // 어느 드라이브인지 (C, D …)
+  drive: string;
 };
 
 export type OldQuery = {
   months: number;
   minMB: number;
   group: OldGroup | "all";
+  drive: string | "all";
 };
 
 export type OldResult = {
@@ -23,9 +26,11 @@ export type OldResult = {
   total: number;
   bytes: number;
   byGroup: Record<OldGroup, { count: number; bytes: number }>;
+  // 드라이브별 개수 (드라이브 고르기 칩에 써요)
+  byDrive: Array<{ letter: string; count: number; bytes: number }>;
   items: OldFile[];
-  // 지금 휴지통에 한 번에 보낼 수 있는 최대 크기 (이보다 큰 파일은 고를 수 없어요)
-  binLimit: number;
+  // 드라이브마다 휴지통에 한 번에 보낼 수 있는 최대 크기 (이보다 큰 파일은 고를 수 없어요)
+  binLimits: Record<string, number>;
 };
 
 // 오래된 파일로 휴지통에 보낼 수 있는 최소 기간

@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import type { DupFile, DupGroup, PairShot, PairsResult, PairsStatus } from "@/lib/pair-types";
 import { isRecent, type TrashItem } from "@/lib/trash-types";
+import { listDrives } from "./drives";
 import { gonePaths } from "./history";
 
 const DATA = path.join(process.cwd(), "data");
@@ -130,10 +131,15 @@ export async function startPairs(): Promise<void> {
   state.startedAt = Date.now();
   state.error = null;
   await fsp.mkdir(DATA, { recursive: true });
+  // 휴지통을 믿을 수 있는 자료 드라이브(D 등)의 사진도 같이 봐요
+  const extra = (await listDrives())
+    .filter((d) => !d.system && d.manage)
+    .map((d) => d.root)
+    .join("|");
 
   const child = spawn(
     "powershell.exe",
-    ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", SCRIPT, "-UserHome", os.homedir(), "-Out", RAW, "-OneDrive", process.env.OneDrive ?? ""],
+    ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", SCRIPT, "-UserHome", os.homedir(), "-Out", RAW, "-OneDrive", process.env.OneDrive ?? "", "-ExtraRoots", extra],
     { windowsHide: true },
   );
 

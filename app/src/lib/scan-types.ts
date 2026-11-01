@@ -1,4 +1,5 @@
 // 서버(훑기)와 화면이 같이 쓰는 모양이에요. 여기엔 Node 전용 코드를 넣지 않아요.
+import type { Drive } from "./drive-types";
 
 export type TypeKey = "image" | "video" | "doc" | "app" | "dev" | "archive" | "etc";
 
@@ -19,25 +20,34 @@ export type MapDir = {
   own: number;
 };
 
-export type ScanResult = {
-  scannedAt: number;
+// 드라이브 하나를 훑은 결과
+export type DriveScan = {
+  letter: string;
+  system: boolean;
   durationMs: number;
   files: number;
   bytes: number;
-  cloudBytes: number;
   skipped: number;
-  home: string;
-  screenshots: string | null;
   tree: MapDir;
   types: Record<TypeKey, number>;
 };
 
+export type ScanResult = {
+  scannedAt: number;
+  durationMs: number;
+  files: number;
+  home: string;
+  screenshots: string | null;
+  drives: DriveScan[];
+};
+
 export type ScanStatus = {
   status: "idle" | "running" | "error";
-  progress: { files: number; bytes: number; current: string };
+  // drive: 지금 훑는 드라이브 · step: 몇 번째 / 모두 몇 개
+  progress: { files: number; bytes: number; current: string; drive: string; step: string };
   startedAt: number | null;
   error: string | null;
-  drive: { total: number; free: number };
+  drives: Drive[];
   result: ScanResult | null;
 };
 

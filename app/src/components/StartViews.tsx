@@ -7,7 +7,7 @@ export function FirstRun({ onScan }: { onScan: () => void }) {
       <img src="/tiddi.png" alt="" className="mx-auto size-20 rounded-[22%] shadow-sm" />
       <h2 className="mt-3 text-2xl font-extrabold">아직 훑어보지 않았어요</h2>
       <p className="mt-2 text-muted">
-        C 드라이브를 훑어서 뭐가 용량을 먹는지 찾아요. 3분쯤 걸려요.
+        내 컴퓨터 드라이브를 훑어서 뭐가 용량을 먹는지 찾아요. 드라이브 하나에 1~3분쯤 걸려요.
         <br />
         <b className="text-ink">읽기만 해요. 아무것도 지우지 않아요.</b>
       </p>
@@ -18,13 +18,15 @@ export function FirstRun({ onScan }: { onScan: () => void }) {
   );
 }
 
-export function Scanning({ files, bytes, used, current }: { files: number; bytes: number; used: number; current: string }) {
+export function Scanning({ files, bytes, used, current, drive = "", step = "" }: { files: number; bytes: number; used: number; current: string; drive?: string; step?: string }) {
   // 훑은 양 ÷ 사용 중인 용량으로 대략 몇 %인지 어림해요
   const pct = used > 0 ? Math.min(99, (bytes / used) * 100) : 0;
   return (
     <section className="rounded-3xl bg-card px-6 py-10 ring-1 ring-line">
       <p className="text-center text-5xl">🔎</p>
-      <h2 className="mt-3 text-center text-2xl font-extrabold">훑는 중이에요</h2>
+      <h2 className="mt-3 text-center text-2xl font-extrabold">
+        {drive ? `${drive} 드라이브를 ` : ""}훑는 중이에요{step ? ` (${step})` : ""}
+      </h2>
       <p className="mt-1 text-center text-sm text-muted">읽기만 하고 있어요. 3분쯤 걸려요. 다른 일 하셔도 돼요.</p>
       <div className="mx-auto mt-6 max-w-lg">
         <div className="h-4 overflow-hidden rounded-full bg-line">

@@ -4,7 +4,9 @@ param(
   [Parameter(Mandatory = $true)][string]$Root,
   [Parameter(Mandatory = $true)][string]$Out,
   [string]$OneDrive = "",
-  [string]$UserHome = $env:USERPROFILE
+  [string]$UserHome = $env:USERPROFILE,
+  # D 드라이브처럼 윈도우가 없는 자료 드라이브면: 드라이브 전체를 오래된 파일 후보로 봐요 (프로그램 · 게임 · 시스템 폴더 빼고)
+  [switch]$Data
 )
 $ErrorActionPreference = "Stop"
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
@@ -31,6 +33,12 @@ public static class TiddiScan {
   // 「오래된 파일」 후보: 내 사용자 폴더 안(AppData · 숨김 폴더 · 개발 프로젝트 빼고)의 1MB 이상 파일
   static string home;
   const long OldMin = 1024 * 1024;
+  // 자료 드라이브(D 등)면 드라이브 전체가 후보예요. 아래 이름의 폴더는 어느 깊이에 있든 빼요
+  static bool dataDrive;
+  static readonly HashSet<string> Protected = new HashSet<string>(StringComparer.OrdinalIgnoreCase) {
+    "$recycle.bin", "system volume information", "windows", "program files", "program files (x86)", "programdata",
+    "windowsapps", "recovery", "config.msi", "msocache", "steamlibrary", "steamapps", "xboxgames", "epic games", "riot games", "node_modules"
+  };
 
   static void Group(string type, string list) {
     foreach (var e in list.Split(' ')) ext["." + e] = type;
@@ -44,8 +52,9 @@ public static class TiddiScan {
     return ext.TryGetValue(extension, out t) ? t : "etc";
   }
 
-  public static void Run(string root, string outPath, string oneDriveRoot, string shots, string userHome) {
+  public static void Run(string root, string outPath, string oneDriveRoot, string shots, string userHome, bool data) {
     home = (userHome ?? "").TrimEnd('\\');
+    dataDrive = data;
     Group("image", "png jpg jpeg gif webp heic bmp tif tiff svg psd ai raw cr2 nef");
     Group("video", "mp4 mov avi mkv wmv m4v webm mts");
     Group("doc", "pdf doc docx xls xlsx ppt pptx hwp hwpx txt md csv key pages numbers");
@@ -53,15 +62,20 @@ public static class TiddiScan {
     Group("archive", "zip rar 7z tar gz iso dmg");
     oneDrive = oneDriveRoot ?? "";
     outw = new StreamWriter(outPath, false, new UTF8Encoding(false));
-    if (!string.IsNullOrEmpty(shots)) outw.WriteLine("K\tscreenshots\t" + shots);
+    if (!string.IsNullOrEmpty(shots) && !dataDrive) outw.WriteLine("K\tscreenshots\t" + shots);
     sw = Stopwatch.StartNew();
-    Walk(new DirectoryInfo(root), 0, false);
+    Walk(new DirectoryInfo(root), 0, dataDrive);
     foreach (var kv in types) outw.WriteLine("T\t" + kv.Key + "\t" + kv.Value);
     outw.WriteLine("S\t" + files + "\t" + bytes + "\t" + cloudFiles + "\t" + cloudBytes + "\t" + skipped + "\t" + sw.ElapsedMilliseconds);
     outw.Close();
   }
 
   static bool StartsOld(DirectoryInfo child, bool parentPick) {
+    if (dataDrive) {
+      if (!parentPick) return false;
+      if ((child.Attributes & (FileAttributes.Hidden | FileAttributes.System)) != 0) return false;
+      return !child.Name.StartsWith(".") && !Protected.Contains(child.Name);
+    }
     string full = child.FullName.TrimEnd('\\');
     if (home.Length > 0 && full.Equals(home, StringComparison.OrdinalIgnoreCase)) return true;
     if (!parentPick) return false;
@@ -123,4 +137,4 @@ public static class TiddiScan {
 }
 '@
 
-[TiddiScan]::Run($Root, $Out, $OneDrive, $Shots, $UserHome)
+[TiddiScan]::Run($Root, $Out, $OneDrive, $Shots, $UserHome, $Data.IsPresent)

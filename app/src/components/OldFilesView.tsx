@@ -36,11 +36,12 @@ export default function OldFilesView({ reloadKey, onTrash, onScan }: Props) {
   const [months, setMonths] = useState(12);
   const [minMB, setMinMB] = useState(10);
   const [group, setGroup] = useState<OldGroup | "all">("all");
+  const [drive, setDrive] = useState<string>("all");
   const [data, setData] = useState<OldResult | null>(null);
   const [selected, setSelected] = useState<Map<string, OldFile>>(() => new Map());
 
   useEffect(() => {
-    const q = new URLSearchParams({ months: String(months), min: String(minMB), group });
+    const q = new URLSearchParams({ months: String(months), min: String(minMB), group, drive });
     let alive = true;
     fetch(`/api/old?${q}`, { cache: "no-store" })
       .then((r) => r.json() as Promise<OldResult>)
@@ -51,7 +52,7 @@ export default function OldFilesView({ reloadKey, onTrash, onScan }: Props) {
     return () => {
       alive = false;
     };
-  }, [months, minMB, group, reloadKey]);
+  }, [months, minMB, group, drive, reloadKey]);
 
   // 목록에서 사라진 파일(휴지통으로 간 것)은 선택에서 빼요
   const visible = new Set((data?.items ?? []).map((f) => f.path));
@@ -87,20 +88,29 @@ export default function OldFilesView({ reloadKey, onTrash, onScan }: Props) {
   }
 
   const items = data?.items ?? [];
-  // 휴지통에 남은 자리보다 큰 파일은 휴지통을 거치지 않고 지워질 수 있어서 고를 수 없게 해요
-  const tooBig = data?.binLimit ?? 0;
-  const sendable = items.filter((f) => f.size <= tooBig);
+  // 그 드라이브 휴지통에 남은 자리보다 큰 파일은 휴지통을 거치지 않고 지워질 수 있어서 고를 수 없게 해요
+  const limitOf = (f: OldFile) => data?.binLimits?.[f.drive] ?? 0;
+  const sendable = items.filter((f) => f.size <= limitOf(f));
   const allOn = sendable.length > 0 && sendable.every((f) => selected.has(f.path));
 
   return (
     <div className="pb-28">
       <section className="space-y-3 rounded-3xl bg-card p-5 ring-1 ring-line">
         <p className="text-sm">
-          오랫동안 <b>고친 적이 없는</b> 파일이에요. 내 사용자 폴더(바탕 화면 · 문서 · 사진 · 다운로드 · OneDrive)만 보고, <b>AppData · 숨김 폴더 · 개발 프로젝트는 빼요.</b>
+          오랫동안 <b>고친 적이 없는</b> 파일이에요. 윈도우가 깔린 드라이브(보통 C)에서는 내 사용자 폴더(바탕 화면 · 문서 · 사진 · 다운로드 · OneDrive)만, 다른 드라이브(D 등)는 드라이브
+          전체를 봐요. <b>AppData · 숨김 폴더 · 개발 프로젝트 · 프로그램 · 게임 폴더는 빼요.</b>
         </p>
         <p className="rounded-2xl bg-sky/50 px-3 py-2 text-xs">
           ☁️ OneDrive 파일은 지우지 않고도 용량을 비울 수 있어요. 탐색기에서 폴더를 우클릭 → <b>「공간 확보」</b>를 누르면 파일은 클라우드에 남고 내 컴퓨터에서만 비워져요.
         </p>
+        {data && data.byDrive.length > 1 && (
+          <Chips
+            label="드라이브"
+            value={drive}
+            options={[["all", "전체"], ...data.byDrive.map((d): [string, string] => [d.letter, `${d.letter} 드라이브 ${d.count.toLocaleString("ko-KR")}`])]}
+            onChange={setDrive}
+          />
+        )}
         <Chips label="기간" value={months} options={MONTHS.map(([v, l]) => [v, `${l} 넘게`])} onChange={setMonths} />
         <Chips label="크기" value={minMB} options={SIZES.map(([v, l]) => [v, `${l} 이상`])} onChange={setMinMB} />
         <Chips
@@ -138,7 +148,7 @@ export default function OldFilesView({ reloadKey, onTrash, onScan }: Props) {
       <ul className="mt-3 divide-y divide-line overflow-hidden rounded-3xl bg-card ring-1 ring-line">
         {items.map((f) => {
           const on = selected.has(f.path);
-          const big = f.size > tooBig;
+          const big = f.size > limitOf(f);
           return (
             <li key={f.path}>
               <label className={`flex items-center gap-3 px-4 py-2.5 ${big ? "" : "cursor-pointer"} ${on ? "bg-key/30" : "hover:bg-cream"}`}>
@@ -188,7 +198,7 @@ export default function OldFilesView({ reloadKey, onTrash, onScan }: Props) {
 function Chips<T extends string | number>({ label, value, options, onChange }: { label: string; value: T; options: Array<[T, string]>; onChange: (v: T) => void }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5 text-sm">
-      <span className="w-10 shrink-0 font-semibold text-muted">{label}</span>
+      <span className="w-14 shrink-0 font-semibold text-muted">{label}</span>
       {options.map(([v, l]) => (
         <button
           key={String(v)}
