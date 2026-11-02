@@ -10,6 +10,7 @@ import type { DupFile } from "@/lib/pair-types";
 import { RECENT_MS, type HistoryEntry, type Refused, type TrashItem } from "@/lib/trash-types";
 import { forgetDrives, listDrives, placeProblem } from "./drives";
 import { gonePaths, readHistory, writeHistory } from "./history";
+import { getSettings } from "./settings";
 import { findOldFile } from "./old";
 import { currentPairs, markBack, markGone, monthOf } from "./pairs";
 
@@ -80,6 +81,8 @@ export async function sendToTrash(paths: unknown): Promise<{ entry: HistoryEntry
     await readHistory();
     // 드라이브마다 휴지통을 믿을 수 있는지 · 얼마나 받아 줄 수 있는지 새로 읽어요
     const drives = await listDrives(true);
+    // 최근 7일 보호 설정 (끄면 최근 파일도 보낼 수 있어요. 오래된 파일은 따로 6개월 규칙이 있어요)
+    const { protectRecent } = await getSettings();
     const gone = await gonePaths();
     const pairsResult = await currentPairs();
     const shots = new Map((pairsResult ? [...pairsResult.pairs, ...pairsResult.uniques] : []).map((s) => [s.path.toLowerCase(), s]));
@@ -113,7 +116,7 @@ export async function sendToTrash(paths: unknown): Promise<{ entry: HistoryEntry
         refuse(p, "파일이 없어요");
         continue;
       }
-      if (Date.now() - st.mtimeMs < RECENT_MS) {
+      if (protectRecent && Date.now() - st.mtimeMs < RECENT_MS) {
         refuse(p, "최근 7일 안에 만든 파일이라 보호 중이에요");
         continue;
       }

@@ -8,13 +8,14 @@ import type { DupFile, DupGroup, PairShot, PairsResult, PairsStatus } from "@/li
 import { isRecent, type TrashItem } from "@/lib/trash-types";
 import { listDrives } from "./drives";
 import { gonePaths } from "./history";
+import { getSettings } from "./settings";
 
 const DATA = path.join(process.cwd(), "data");
 const RAW = path.join(DATA, "pairs-raw.tsv");
 const RESULT = path.join(DATA, "pairs.json");
 const SCRIPT = path.join(process.cwd(), "scripts", "pairs.ps1");
 
-type State = Omit<PairsStatus, "result"> & { result?: PairsResult | null; allowed?: Set<string> };
+type State = Omit<PairsStatus, "result" | "protectRecent"> & { result?: PairsResult | null; allowed?: Set<string> };
 
 const g = globalThis as unknown as { __tiddiPairs?: State };
 const state: State = (g.__tiddiPairs ??= {
@@ -102,10 +103,10 @@ function chooseKeep(files: DupFile[]): string {
 }
 
 // 지금 화면에 보여 줄 같은 사진 여러 벌 (휴지통에 간 파일은 빼고, 남은 게 2개 이상인 묶음만)
-function liveDupes(groups: DupGroup[], gone: Set<string>, now: number): DupGroup[] {
+function liveDupes(groups: DupGroup[], gone: Set<string>, now: number, protect: boolean): DupGroup[] {
   const out: DupGroup[] = [];
   for (const grp of groups) {
-    const files = grp.files.filter((f) => !gone.has(f.path.toLowerCase())).map((f) => ({ ...f, recent: isRecent(f, now) }));
+    const files = grp.files.filter((f) => !gone.has(f.path.toLowerCase())).map((f) => ({ ...f, recent: protect && isRecent(f, now) }));
     if (files.length < 2 || files.every((f) => f.project)) continue;
     const keep = files.some((f) => f.path === grp.keep) ? grp.keep : chooseKeep(files);
     out.push({ ...grp, files, keep });
@@ -117,11 +118,13 @@ export async function getPairs(): Promise<PairsStatus> {
   const saved = await loadResult();
   const now = Date.now();
   const gone = await gonePaths();
-  const mark = (s: PairShot) => ({ ...s, recent: isRecent(s, now) });
+  // 최근 7일 보호를 끄면 「보호 중」 표시를 달지 않아요
+  const { protectRecent } = await getSettings();
+  const mark = (s: PairShot) => ({ ...s, recent: protectRecent && isRecent(s, now) });
   const result = saved
-    ? { ...saved, pairs: saved.pairs.map(mark), uniques: saved.uniques.map(mark), dupes: liveDupes(saved.dupes ?? [], gone, now) }
+    ? { ...saved, pairs: saved.pairs.map(mark), uniques: saved.uniques.map(mark), dupes: liveDupes(saved.dupes ?? [], gone, now, protectRecent) }
     : null;
-  return { status: state.status, progress: state.progress, startedAt: state.startedAt, error: state.error, result };
+  return { status: state.status, progress: state.progress, startedAt: state.startedAt, error: state.error, result, protectRecent };
 }
 
 export async function startPairs(): Promise<void> {

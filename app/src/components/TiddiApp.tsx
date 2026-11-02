@@ -378,6 +378,11 @@ export default function TiddiApp() {
               onToggle={toggle}
               onSetMany={setMany}
               picked={{ paths: picked.map((s) => s.path), bytes: sum(picked) }}
+              protectRecent={pairsStatus?.protectRecent ?? true}
+              onProtectRecent={async (on) => {
+                await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ protectRecent: on }) });
+                await refreshPairs();
+              }}
               onTrash={() => {
                 setTrashError(null);
                 setPlan({

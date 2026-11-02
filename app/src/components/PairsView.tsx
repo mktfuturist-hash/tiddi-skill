@@ -23,6 +23,9 @@ type Props = {
   onTrash: () => void;
   // 세 탭을 합친 선택 (아래 막대에 보여 줘요)
   picked: { paths: string[]; bytes: number };
+  // 최근 7일 파일 보호 켜기 · 끄기
+  protectRecent: boolean;
+  onProtectRecent: (on: boolean) => void;
 };
 
 // 한 달에 사진이 많으면 처음엔 이만큼만 보여 줘요
@@ -32,7 +35,7 @@ function sum(list: PairShot[]) {
   return list.reduce((a, s) => a + s.size, 0);
 }
 
-export default function PairsView({ pairs, uniques, dupes, keeps, onKeep, tab, onTab, selected, onToggle, onSetMany, onTrash, picked }: Props) {
+export default function PairsView({ pairs, uniques, dupes, keeps, onKeep, tab, onTab, selected, onToggle, onSetMany, onTrash, picked, protectRecent, onProtectRecent }: Props) {
   const [opened, setOpened] = useState<Set<string>>(() => new Set());
   const [zoom, setZoom] = useState<PairShot | null>(null);
   const list = tab === "pair" ? pairs : tab === "unique" ? uniques : [];
@@ -45,6 +48,26 @@ export default function PairsView({ pairs, uniques, dupes, keeps, onKeep, tab, o
         <TabButton active={tab === "pair"} onClick={() => onTab("pair")} title="스크린샷 짝" sub={`${pairs.length.toLocaleString("ko-KR")}장 · ${formatBytes(sum(pairs))}`} />
         <TabButton active={tab === "dup"} onClick={() => onTab("dup")} title="같은 사진 여러 벌" sub={`${dupes.length.toLocaleString("ko-KR")}묶음 · 최대 ${formatBytes(dupFree)}`} />
         <TabButton active={tab === "unique"} onClick={() => onTab("unique")} title="스크린샷 유일본" sub={`${uniques.length.toLocaleString("ko-KR")}장 · ${formatBytes(sum(uniques))}`} />
+      </div>
+
+      <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-card px-4 py-3 text-sm ring-1 ring-line">
+        <span>
+          <b>🛡️ 최근 7일 파일 보호</b>
+          <span className="block text-xs text-muted">
+            {protectRecent
+              ? "켜져 있어요. 최근 7일 안에 생긴 파일은 고를 수 없어요"
+              : "꺼져 있어요. 오늘 찍은 스크린샷도 사본이 있으면 지울 수 있어요. 같은 사진 묶음은 그래도 하나는 꼭 남겨요"}
+          </span>
+        </span>
+        <button
+          role="switch"
+          aria-checked={protectRecent}
+          aria-label="최근 7일 파일 보호"
+          onClick={() => onProtectRecent(!protectRecent)}
+          className={`relative h-7 w-12 shrink-0 rounded-full transition ${protectRecent ? "bg-mint-deep" : "bg-line"}`}
+        >
+          <span className={`absolute top-1 size-5 rounded-full bg-white shadow transition-all ${protectRecent ? "left-6" : "left-1"}`} />
+        </button>
       </div>
 
       <p className="mt-4 rounded-2xl bg-card px-4 py-3 text-sm ring-1 ring-line">

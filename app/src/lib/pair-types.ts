@@ -53,6 +53,8 @@ export type PairsStatus = {
   startedAt: number | null;
   error: string | null;
   result: PairsResult | null;
+  // 최근 7일 파일을 보호하는지 (끄면 recent 표시가 모두 false로 와요)
+  protectRecent: boolean;
 };
 
 // 같은 사진 여러 벌에서 기본으로 휴지통에 넣을 파일: 남길 것 · 프로젝트 · 최근 7일이 아니고, 남길 것과 다른 폴더에 있는 것
